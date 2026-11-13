@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v5
+
+      - name: Versie uit de tag in de kaart zetten
+        run: |
+          sed -i "s/const CARD_VERSION = '.*';/const CARD_VERSION = '$GITHUB_REF_NAME';/" printer-badge.js
+          grep -n "const CARD_VERSION" printer-badge.js
+
+      - name: JS-bestand aan de release hangen
+        run: gh release upload "$GITHUB_REF_NAME" printer-badge.js --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
