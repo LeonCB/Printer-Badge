@@ -116,8 +116,7 @@
          --printer-badge-icon-color      printer icon while idle
          --printer-badge-printing-color  printer icon while printing (pulses)
          --printer-badge-error-color     printer icon when stopped/unavailable
-         --printer-badge-low-color       percentage of an ink below the threshold
-         --printer-badge-ink-outline     filter around the ink drops (none to switch off) */
+         --printer-badge-low-color       percentage and glow of an ink below the threshold */
     ha-icon.printer { color: var(--printer-badge-icon-color, var(--primary-color)); }
     ha-icon.printer.printing {
       color: var(--printer-badge-printing-color, var(--yellow-color));
@@ -129,11 +128,23 @@
     .row { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
     .sep { width: 1px; height: 16px; background: color-mix(in srgb, var(--primary-text-color) 25%, transparent); }
     .ink { display: inline-flex; align-items: center; gap: 4px; }
+    /* Thin white outline so every ink colour (black too) stands out on a dark badge */
     .ink ha-icon, .drop {
       --mdc-icon-size: 18px;
-      filter: var(--printer-badge-ink-outline, drop-shadow(0 0 0.6px #fff) drop-shadow(0 0 0.6px #fff));
+      filter: drop-shadow(0 0 0.6px #fff) drop-shadow(0 0 0.6px #fff);
     }
     .low { color: var(--printer-badge-low-color, var(--red-color)); }
+    /* Ink below the threshold: the outline glows red */
+    .ink.low ha-icon, .drop.low { animation: pb-glow 1.6s ease-in-out infinite; }
+    @keyframes pb-glow {
+      0%, 100% { filter: drop-shadow(0 0 0.6px #fff) drop-shadow(0 0 0.6px #fff); }
+      50% {
+        filter: drop-shadow(0 0 1px var(--printer-badge-low-color, var(--red-color)))
+          drop-shadow(0 0 3px var(--printer-badge-low-color, var(--red-color)))
+          drop-shadow(0 0 5px var(--printer-badge-low-color, var(--red-color)));
+      }
+    }
+    @media (prefers-reduced-motion: reduce) { .ink.low ha-icon, .drop.low { animation: none; } }
 
     /* details pop-up */
     dialog {
@@ -225,7 +236,7 @@
         const s = h.states[i.entity];
         const v = s ? Math.round(Number(s.state)) : NaN;
         const isLow = !isNaN(v) && v < low;
-        return `<span class="ink"><ha-icon icon="mdi:water" style="color:${i.color}"></ha-icon><span class="${isLow ? 'low' : ''}">${isNaN(v) ? '—' : v + '%'}</span></span>`;
+        return `<span class="ink${isLow ? ' low' : ''}"><ha-icon icon="mdi:water" style="color:${i.color}"></ha-icon><span>${isNaN(v) ? '—' : v + '%'}</span></span>`;
       }).join('');
       this._badge.innerHTML =
         `<ha-icon slot="icon" class="printer ${cls}" icon="${c.icon || 'mdi:printer'}"></ha-icon>` +
@@ -265,7 +276,7 @@
         const v = s ? Math.round(Number(s.state)) : NaN;
         const isLow = !isNaN(v) && v < low;
         return `<div class="line">
-          <ha-icon class="drop" icon="mdi:water" style="color:${i.color}"></ha-icon>
+          <ha-icon class="drop${isLow ? ' low' : ''}" icon="mdi:water" style="color:${i.color}"></ha-icon>
           <span>${shortName(h, i.entity)}</span>
           <span class="val ${isLow ? 'low' : ''}">${isNaN(v) ? '—' : v + '%'}</span>
           <div class="meter"><i style="width:${isNaN(v) ? 0 : Math.max(0, Math.min(100, v))}%;background:${i.color}"></i></div>
