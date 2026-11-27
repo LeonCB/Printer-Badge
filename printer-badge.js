@@ -84,10 +84,15 @@
     return config.pages || detected(hass, config.entity).pages;
   }
 
-  // Friendly name without the device name in front of it
-  // ("Epson EcoTank ET-2870 Afgedrukte pagina's kleur" -> "Afgedrukte pagina's kleur").
+  // The entity's own name, without the device name
+  // ("Afgedrukte pagina's kleur"). Home Assistant 2026.4 and newer provide this
+  // through formatEntityName; otherwise the device name is cut off the friendly name.
   function shortName(hass, entityId){
     const s = hass.states[entityId];
+    if (s && hass.formatEntityName) {
+      const name = hass.formatEntityName(s, { type: 'entity' });
+      if (name) return name;
+    }
     const full = (s && s.attributes.friendly_name) || entityId;
     const reg = hass.entities && hass.entities[entityId];
     const dev = reg && reg.device_id && hass.devices && hass.devices[reg.device_id];
@@ -247,7 +252,7 @@
         this._title(),
         fmtState(h, status),
         pages !== null ? `${pages} pagina's` : '',
-        ...inks.map(i => { const s = h.states[i.entity]; return s ? `${s.attributes.friendly_name || i.entity} ${s.state}%` : ''; })
+        ...inks.map(i => { const s = h.states[i.entity]; return s ? `${shortName(h, i.entity)} ${s.state}%` : ''; })
       ].filter(Boolean).join(', ');
       this._badge.setAttribute('aria-label', label);
       this._badge.setAttribute('title', label);
@@ -262,7 +267,7 @@
       const dev = reg && reg.device_id && h.devices && h.devices[reg.device_id];
       if (dev) return dev.name_by_user || dev.name;
       const s = h.states[c.entity];
-      return s ? s.attributes.friendly_name : c.entity;
+      return shortName(h, c.entity);
     }
 
     _fillDialog(){
